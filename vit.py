@@ -20,13 +20,24 @@ class ViT(torch.nn.Module):
             out_features=EMBEDDING_SIZE
         )
 
+        self.positional_embeddings = torch.nn.Linear
+            in_features=(224/ PATCH_SIZE)**2 + 1, # add 1 for CLS
+            out_features=EMBEDDING_SIZE
+        )
+
     def forward(self, x, training=False):
         
         # (B, C, H, W) -> (B , C*PATCH_SIZE *PATCH_SIZE, N_PATCHES)
         x = self.unfold_layer(x)
         x = torch.transpose(x, 1, 2)
 
+        # (B, n_patches, large_dim) -> (B, n_patches, EMBEDDING_SIZE)
         x = self.linear_project(x)
+
+        # add position encoding
+        # for image -> position is (0, 1, 2, 3, 4)
+        # positional emebddings is (L, D) (B, L)
+        
         return x
 
 if __name__ == '__main__':
