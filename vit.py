@@ -7,8 +7,10 @@ import torch.nn.functional as F
 import numpy as np
 
 
-PATCH_SIZE = 16
-EMBEDDING_SIZE = 128
+PATCH_SIZE = 14
+EMBEDDING_SIZE = 192
+N_LAYERS = 12
+NUM_HEAD = 3
 
 
 class TransformerLayer(torch.nn.Module):
@@ -68,13 +70,9 @@ class TransformerLayer(torch.nn.Module):
         """ Implementation of a MSA """
         
         x_normed = self.layer_norm(x)
-
         x = x + self.multiheaded_self_attention(x_normed, mask=mask)
-        
-
-        x = self.mlp_1(self.mlp_0(self.layer_norm(x))) + x
+        x = self.mlp_1(F.gelu(self.mlp_0(self.layer_norm(x)))) + x
         return x
-        
         
 
 class ViT(torch.nn.Module):
@@ -96,8 +94,8 @@ class ViT(torch.nn.Module):
         self.transformer_blocks = torch.nn.ModuleList([
             TransformerLayer(
                 embedding_size=EMBEDDING_SIZE,
-                num_head=4
-            ) for l in range(4)
+                num_head=NUM_HEAD
+            ) for l in range(N_LAYERS)
         ])
     
 
@@ -134,7 +132,10 @@ if __name__ == '__main__':
     print(x.shape)
 
     model = ViT()
+    # print the number of parameters:
+    print("Number of parameters: ", sum(param.numel() for param in model.parameters()))
 
     y = model(x)
+    
 
     print(y.shape)
