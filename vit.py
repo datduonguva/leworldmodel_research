@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import numpy as np
 
 
+IMAGE_SIZE = 64
 PATCH_SIZE = 14
 EMBEDDING_SIZE = 192
 N_LAYERS = 12
@@ -33,10 +34,10 @@ class TransformerLayer(torch.nn.Module):
 
         self.mlp_0 = torch.nn.Linear(
             in_features=self.embedding_size,
-            out_features=2 * self.embedding_size,
+            out_features=4 * self.embedding_size,
         )
         self.mlp_1 = torch.nn.Linear(
-            in_features=2 *self.embedding_size,
+            in_features=4 *self.embedding_size,
             out_features=self. embedding_size,
         )
  
@@ -87,7 +88,7 @@ class ViT(torch.nn.Module):
         )
 
         self.positional_embeddings = torch.nn.Embedding(
-            num_embeddings=int((224/ PATCH_SIZE)**2 + 1), # add 1 for CLS
+            num_embeddings=int((IMAGE_SIZE/ PATCH_SIZE)**2 + 1), # add 1 for CLS
             embedding_dim=EMBEDDING_SIZE
         )
 
@@ -104,13 +105,11 @@ class ViT(torch.nn.Module):
         # (B, C, H, W) -> (B , C*PATCH_SIZE *PATCH_SIZE, N_PATCHES)
         x = self.unfold_layer(x)
         x = torch.transpose(x, 1, 2)
-        print("x shape after transpose: ", x.shape)
         B, N_PATCHES, D = x.shape
 
         # concat a cls token
         x = torch.cat((x, torch.zeros(B, 1, D)), dim=1)
 
-        print("x shape after concat: ", x.shape)
         # linear projection
         x = self.linear_project(x)
 
@@ -119,17 +118,16 @@ class ViT(torch.nn.Module):
             torch.arange(N_PATCHES + 1).unsqueeze(0)
         )
         
-        print("shape after adding positional: ", x.shape) 
 
         for transformer_block in self.transformer_blocks:
             x = transformer_block(x)
-        print("shape after transformer: ", x.shape) 
 
         return x
 
+
+
 if __name__ == '__main__':
-    x = torch.Tensor(np.random.rand(2, 3, 64, 64))
-    print(x.shape)
+    x = torch.Tensor(np.random.rand(2, 3, IMAGE_SIZE, IMAGE_SIZE))
 
     model = ViT()
     # print the number of parameters:
