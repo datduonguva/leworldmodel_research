@@ -5,7 +5,7 @@ This is to test the implementation of the ViT model on the classification task
 import numpy as np
 from datasets import load_dataset
 import torch
-from vit import ViT, EMBEDDING_SIZE 
+from leworld_model import ViT, EMBEDDING_SIZE 
 
 tiny_imagenet = load_dataset('Maysee/tiny-imagenet', split='train')
 

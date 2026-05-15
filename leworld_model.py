@@ -88,7 +88,7 @@ class ViT(torch.nn.Module):
         )
 
         self.positional_embeddings = torch.nn.Embedding(
-            num_embeddings=int((IMAGE_SIZE/ PATCH_SIZE)**2 + 1), # add 1 for CLS
+            num_embeddings=512, # there should only be that many patches
             embedding_dim=EMBEDDING_SIZE
         )
 
@@ -126,6 +126,61 @@ class ViT(torch.nn.Module):
 
 
 
+class AdaLN(nn.Module):
+    def __init__(self, emb_dim, num_features):
+        """
+        emb_dim: size of condition's feature space
+        num_features: size of features' space
+        """
+        super().__init__()
+        # Standard LayerNorm without learnable affine parameters
+        self.norm = torch.nn.LayerNorm(num_features, elementwise_affine=False)
+        # Linear layer to predict scale and shift from condition embedding
+        self.linear = torch.nn.Linear(emb_dim, 2 * num_features)
+
+    def forward(self, x, cond_emb):
+        """
+        x: (batch, seq_len, num_features)
+        cond_emb: (batch, emb_dim)
+        """
+        
+        # Predict scale (gamma) and shift (beta)
+        # Often initialized such that scale is near 1 and shift is near 0
+        params = self.linear(cond_emb).unsqueeze(1) # (batch, 1, 2 * num_features)
+        gamma, beta = params.chunk(2, dim=-1)
+        
+        return self.norm(x) * (1 + gamma) + beta
+
+class Predictor(torch.nn.Module):
+    """
+    Implementing Transformer with learnt positional embeddings and
+    causal masking
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.positional_embeddings = torch.nn.Embedding(
+            num_embeddings=128, # max number of timesteps 
+            embedding_dim=EMBEDDING_SIZE
+        )
+
+    def forward(self, em: torch.Tensor, actions, causal_mask=True) -> torch.Tensor:
+        """
+        Predict the next embedding        
+        causal_mask must be set to True during training,
+        """
+        B, T, D = em.shape
+
+        # add positional embeddings
+        x = em + self.positional_embeddings(
+            torch.arange(T).unsqueeze(0)
+        )  # (B, T, D)
+
+        #
+        
+
+        
+        
 if __name__ == '__main__':
     x = torch.Tensor(np.random.rand(2, 3, IMAGE_SIZE, IMAGE_SIZE))
 
